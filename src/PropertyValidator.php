@@ -83,6 +83,15 @@ trait PropertyValidator
         return $self;
     }
 
+    public function toArray()
+    {
+        return array_reduce($this->__properties, function ($property, $acc) {
+            $acc[$property] = $this->$property;
+
+            return $acc;
+        }, []);
+    }
+
     public function __call($method, $args)
     {
         if (!in_array($method, $this->__properties)) {

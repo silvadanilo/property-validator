@@ -86,7 +86,7 @@ trait PropertyValidator
     public function __call($method, $args)
     {
         if (!in_array($method, $this->__properties)) {
-            throw \RuntimeException("`$method` field is missing in the " . __CLASS__ . ' object');
+            throw new \RuntimeException("`$method` field is missing in the " . __CLASS__ . ' object');
         }
 
         return $this->$method;

@@ -11,9 +11,11 @@ use Symfony\Component\Validator\Validation;
 
 trait PropertyValidator
 {
-    private static $initiated = false;
+    private static bool $__initiated = false;
 
-    private array $properties = [];
+    private static array $__traitProperties = [];
+
+    private array $__properties = [];
 
     public static function create(array $data = []): Self
     {
@@ -22,7 +24,10 @@ trait PropertyValidator
         $rc = new \ReflectionClass(__CLASS__);
         $nullProperties = self::nullProperties($rc);
 
-        $data = array_merge($nullProperties, $rc->getDefaultProperties(), $data);
+        $data = array_diff_key(
+            array_merge($nullProperties, $rc->getDefaultProperties(), $data),
+            array_flip(self::$__traitProperties)
+        );
         $properties = array_keys($nullProperties);
 
         $rules = [];
@@ -80,19 +85,24 @@ trait PropertyValidator
 
     private static function nullProperties(ReflectionClass $rc): array
     {
-        return array_fill_keys(
-            array_map(fn($p) => $p->getName(), $rc->getProperties()),
+        $fetchReflectionPropertyName = fn ($p) => $p->getName();
+
+        return array_diff_key(array_fill_keys(
+            array_map($fetchReflectionPropertyName, $rc->getProperties()),
             null
-        );
+        ), array_flip(self::$__traitProperties));
     }
 
     private static function init(): void
     {
-        if (self::$initiated) {
+        if (self::$__initiated) {
             return;
         }
 
         AnnotationRegistry::registerLoader('class_exists');
-        self::$initiated = true;
+        self::$__initiated = true;
+
+        $traitRc = new \ReflectionClass(PropertyValidator::class);
+        self::$__traitProperties = array_map(fn ($p) => $p->getName(), $traitRc->getProperties());
     }
 }

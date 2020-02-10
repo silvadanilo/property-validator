@@ -17,8 +17,17 @@ trait PropertyValidator
 
     private array $__properties = [];
 
-    public static function create(array $data = []): Self
+    public static function create(...$arguments): Self
     {
+        $data = isset($arguments[0]) ? $arguments[0] : null;
+
+        if (is_object($data) && get_class($data) == get_called_class()) {
+            return $data;
+        }
+        if (!is_array($data)) {
+            throw new InvalidArgumentException(static::class . ": Data to be boxed must be an associative array.");
+        }
+
         self::init();
 
         $rc = new \ReflectionClass(__CLASS__);

@@ -15,9 +15,9 @@ trait PropertyValidator
 
     private static array $__traitProperties = [];
 
-    private array $__properties = [];
+    private static ?array $__classProperties = [];
 
-    public static function create(...$arguments): Self
+    public static function create(...$arguments)
     {
         $data = isset($arguments[0]) ? $arguments[0] : null;
 
@@ -25,12 +25,12 @@ trait PropertyValidator
             return $data;
         }
         if (!is_array($data)) {
-            throw new InvalidArgumentException(static::class . ": Data to be boxed must be an associative array.");
+            throw new InvalidArgumentException(static::class . ': Data to be boxed must be an associative array.');
         }
 
         self::init();
 
-        $rc = new \ReflectionClass(__CLASS__);
+        $rc = new \ReflectionClass(static::class);
         $nullProperties = self::nullProperties($rc);
 
         $data = array_diff_key(
@@ -70,33 +70,86 @@ trait PropertyValidator
 
         $errors = $validator->validate($data, new Assert\Collection($rules));
         if (count($errors)) {
-            throw new InvalidDataException(iterator_to_array($errors), (string) $errors);
+            throw new InvalidDataException(iterator_to_array($errors), 'Error on creation of `' . static::class . '`: ' . (string) $errors);
         }
 
-        $self = new Self();
-        $self->__properties = $properties;
+        $self = new static();
+        /* $rcSelf = new ReflectionClass($self); */
 
         foreach ($data as $key => $value) {
+            /* $p = $rcSelf->getProperty($key); */
+            /* $p->setAccessible(true); */
+            /* $p->setValue($self, $value); */
             $self->$key = $value;
         }
 
         return $self;
     }
 
-    public function toArray()
+    private static function classProperties(?ReflectionClass $rc = null): array
     {
-        return array_reduce($this->__properties, function ($property, $acc) {
-            $acc[$property] = $this->$property;
+        if (isset(self::$__classProperties[static::class])) {
+            return self::$__classProperties[static::class];
+        }
+
+        if (is_null($rc)) {
+            $rc = new \ReflectionClass(static::class);
+        }
+
+        self::$__classProperties[static::class] = array_diff(
+            array_map(fn ($p) => $p->getName(), $rc->getProperties()),
+            self::$__traitProperties
+        );
+
+        return self::$__classProperties[static::class];
+    }
+
+    public function toArray(bool $recursive = false): array
+    {
+        $arrayData = array_reduce(self::classProperties(), function ($acc, $property) {
+            $acc[$property] = $this->$property();
 
             return $acc;
         }, []);
+
+        if (!$recursive) {
+            return $arrayData;
+        }
+
+        $recursiveUnboxing = function ($data) use (&$recursiveUnboxing, $recursive) {
+            foreach ($data as $key => $value) {
+                if ($value instanceof PropertyValidator) {
+                    $data[$key] = $value->toArray($recursive);
+                } elseif (is_array($value)) {
+                    $data[$key] = $recursiveUnboxing($value);
+                }
+
+                if (isset($this->objects[$key]) && is_array($this->objects[$key])) {
+                    $data[$key] = array_map(function ($v) use ($recursive) {
+                        return $v->toArray($recursive);
+                    }, $value);
+                }
+            }
+
+            return $data;
+        };
+
+        return $recursiveUnboxing($arrayData);
     }
 
     public function __call($method, $args)
     {
-        if (!in_array($method, $this->__properties)) {
+        if (!in_array($method, self::classProperties())) {
+            /* error_log(var_export(static::class, true)); */
+            /* error_log(var_export(self::classProperties(), true)); */
             throw new \RuntimeException("`$method` field is missing in the " . __CLASS__ . ' object');
         }
+
+        /* $rcThis = new ReflectionClass($this); */
+        /* $p = $rcThis->getProperty($method); */
+        /* $p->setAccessible(true); */
+
+        /* return $p->getValue($this); */
 
         return $this->$method;
     }

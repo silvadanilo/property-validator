@@ -25,14 +25,22 @@ trait PropertyValidator
         if (is_object($data) && get_class($data) == get_called_class()) {
             return $data;
         }
-        if (!is_array($data)) {
-            throw new InvalidArgumentException(static::class . ': Data to be boxed must be an associative array.');
-        }
 
         self::init();
 
         $rc = new \ReflectionClass(static::class);
         $nullProperties = self::nullProperties($rc);
+        $properties = array_keys($nullProperties);
+
+        if (!is_array($data)) {
+            if (count($properties) === 1) {
+                $singlePropertyValue = $data;
+                $data = [];
+                $data[$properties[0]] = $singlePropertyValue;
+            } else {
+                throw new InvalidArgumentException(static::class . ': Data to be boxed must be an associative array.');
+            }
+        }
 
         $data = array_diff_key(
             array_merge($nullProperties, $rc->getDefaultProperties(), $data),
@@ -75,12 +83,8 @@ trait PropertyValidator
         }
 
         $self = new static();
-        /* $rcSelf = new ReflectionClass($self); */
 
         foreach ($data as $key => $value) {
-            /* $p = $rcSelf->getProperty($key); */
-            /* $p->setAccessible(true); */
-            /* $p->setValue($self, $value); */
             $self->$key = $value;
         }
 
@@ -141,16 +145,8 @@ trait PropertyValidator
     public function __call($method, $args)
     {
         if (!in_array($method, self::classProperties())) {
-            /* error_log(var_export(static::class, true)); */
-            /* error_log(var_export(self::classProperties(), true)); */
             throw new \RuntimeException("`$method` field is missing in the " . __CLASS__ . ' object');
         }
-
-        /* $rcThis = new ReflectionClass($this); */
-        /* $p = $rcThis->getProperty($method); */
-        /* $p->setAccessible(true); */
-
-        /* return $p->getValue($this); */
 
         return $this->$method;
     }

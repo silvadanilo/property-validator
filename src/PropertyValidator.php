@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace PropertyValidator;
 
 use Doctrine\Common\Annotations\AnnotationRegistry;
+use InvalidArgumentException;
 use ReflectionClass;
 use Symfony\Component\Validator\Constraints as Assert;
 use Symfony\Component\Validator\Validation;

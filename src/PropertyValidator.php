@@ -77,7 +77,7 @@ trait PropertyValidator
             );
         }
 
-        $errors = $validator->validate($data, new Assert\Collection($rules));
+        $errors = $validator->validate($data, new Assert\Collection(['fields' => $rules]));
         if (count($errors)) {
             throw new InvalidDataException(iterator_to_array($errors), 'Error on creation of `' . static::class . '`: ' . (string) $errors);
         }

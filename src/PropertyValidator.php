@@ -61,6 +61,11 @@ trait PropertyValidator
                     'type' => $type->getName(),
                 ]);
             }
+
+            $parseMethod = 'parse' . ucfirst($property);
+            if (isset($data[$property]) && is_callable('self::' . $parseMethod)) {
+                $data[$property] = self::$parseMethod($data[$property], $data);
+            }
         }
 
         $validator = Validation::createValidatorBuilder()

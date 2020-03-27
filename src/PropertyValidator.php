@@ -33,7 +33,7 @@ trait PropertyValidator
         $properties = array_keys($nullProperties);
 
         if (!is_array($data)) {
-            if (count($properties) === 1) {
+            if (1 === count($properties)) {
                 $singlePropertyValue = $data;
                 $data = [];
                 $data[$properties[0]] = $singlePropertyValue;
@@ -63,8 +63,9 @@ trait PropertyValidator
             }
 
             $parseMethod = 'parse' . ucfirst($property);
-            if (isset($data[$property]) && is_callable('self::' . $parseMethod)) {
-                $data[$property] = self::$parseMethod($data[$property], $data);
+            if (isset($data[$property]) && is_callable('static::' . $parseMethod)) {
+                $class = get_called_class();
+                $data[$property] = $class::$parseMethod($data[$property], $data);
             }
         }
 
